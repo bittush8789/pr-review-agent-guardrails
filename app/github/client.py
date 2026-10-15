@@ -46,11 +46,13 @@ class GitHubClient:
         self.max_retries = max_retries
 
         self._headers = {
-            "Authorization": f"Bearer {token.strip()}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "GitHub-PR-Review-Agent/1.0",
         }
+        clean_token = token.strip()
+        if clean_token and not clean_token.startswith("replace_with"):
+            self._headers["Authorization"] = f"Bearer {clean_token}"
         self._client: Optional[httpx.Client] = None
 
     def __enter__(self) -> GitHubClient:

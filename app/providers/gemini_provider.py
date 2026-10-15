@@ -58,48 +58,56 @@ class GeminiProvider(AIReviewProvider):
             temperature=0.1,  # Low temperature for factual, consistent code analysis
         )
 
-        attempts = 0
+        models_to_try = [self.model_name]
+        for fallback in ["gemini-2.5-flash", "gemini-2.0-flash"]:
+            if fallback not in models_to_try:
+                models_to_try.append(fallback)
+
         last_exception: Optional[Exception] = None
 
-        while attempts <= self.max_retries:
-            attempts += 1
-            try:
-                logger.info(
-                    "Sending diff context to Gemini (model: %s, attempt %d/%d)...",
-                    self.model_name,
-                    attempts,
-                    self.max_retries + 1,
-                )
+        for model_candidate in models_to_try:
+            attempts = 0
+            while attempts <= self.max_retries:
+                attempts += 1
+                try:
+                    logger.info(
+                        "Sending diff context to Gemini (model: %s, attempt %d/%d)...",
+                        model_candidate,
+                        attempts,
+                        self.max_retries + 1,
+                    )
 
-                response = self._client.models.generate_content(
-                    model=self.model_name,
-                    contents=user_prompt,
-                    config=config,
-                )
+                    response = self._client.models.generate_content(
+                        model=model_candidate,
+                        contents=user_prompt,
+                        config=config,
+                    )
 
-                if response is None or not response.text:
-                    logger.warning("Gemini returned an empty response.")
-                    return '{"findings": []}'
+                    if response is None or not response.text:
+                        logger.warning("Gemini returned an empty response.")
+                        return '{"findings": []}'
 
-                return response.text
+                    return response.text
 
-            except Exception as exc:
-                last_exception = exc
-                error_str = str(exc)
-                logger.warning(
-                    "Gemini API request failed on attempt %d/%d: %s",
-                    attempts,
-                    self.max_retries + 1,
-                    error_str[:200],
-                )
+                except Exception as exc:
+                    last_exception = exc
+                    error_str = str(exc)
+                    logger.warning(
+                        "Gemini API request failed for model %s on attempt %d/%d: %s",
+                        model_candidate,
+                        attempts,
+                        self.max_retries + 1,
+                        error_str[:200],
+                    )
 
-                if attempts <= self.max_retries:
-                    backoff = 2.0 ** attempts
-                    time.sleep(backoff)
-                else:
-                    break
+                    if attempts <= self.max_retries:
+                        backoff = 1.5 ** attempts
+                        time.sleep(backoff)
+                    else:
+                        break
+            logger.info("Retrying with next fallback model if available...")
 
         raise ProviderAPIError(
-            f"Failed to generate review from Gemini model '{self.model_name}': {last_exception}",
+            f"Failed to generate review from Gemini model '{self.model_name}' and fallbacks: {last_exception}",
             original_error=last_exception,
         )

@@ -99,7 +99,13 @@ def load_settings(env: Optional[dict[str, str]] = None) -> Settings:
     Raises:
         ConfigurationError: If any required setting is missing or out of valid bounds.
     """
-    source = os.environ if env is None else env
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
+
+    source = os.environ if env is None else {**os.environ, **env}
 
     github_token = source.get("GITHUB_TOKEN", "").strip()
     if not github_token:
