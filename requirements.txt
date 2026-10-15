@@ -1,0 +1,18 @@
+# Core dependencies for GitHub PR-Review Agent with Guardrails
+# Python 3.12+ required
+
+# Google Gemini Official GenAI SDK
+google-genai>=0.1.1
+
+# HTTP client for GitHub REST API
+httpx>=0.27.0
+
+# JSON Schema validation for review finding contracts
+jsonschema>=4.21.0
+
+# LangSmith Observability & Tracing SDK
+langsmith>=0.1.0
+
+# Testing and Mocking Frameworks
+pytest>=8.0.0
+pytest-mock>=3.12.0

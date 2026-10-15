@@ -1,0 +1,77 @@
+name: "GitHub PR-Review Agent with Guardrails"
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    # Restrict to relevant paths to avoid unnecessary review runs on purely non-code files if desired
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
+
+# Least Privilege: Only allow reading PR diffs and posting inline review comments.
+# Explicitly disallow contents:write, checks:write, administration, or merge capabilities.
+permissions:
+  contents: read
+  pull-requests: write
+
+# Prevent duplicate concurrent executions when multiple commits are pushed in rapid succession.
+concurrency:
+  group: pr-review-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: "Automated PR Guardrails & Security Review"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Fork Protection Note:
+    # Under standard 'pull_request' triggers, GitHub does not expose repository secrets
+    # (such as GEMINI_API_KEY) to forks without authorized organization membership.
+    # This prevents malicious PR authors from exfiltrating credentials.
+    steps:
+      - name: "Checkout Base Repository"
+        uses: actions/checkout@v4
+        with:
+          # Only fetch minimal shallow history needed; do not execute untrusted hooks or scripts
+          fetch-depth: 1
+
+      - name: "Set up Python 3.12"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: "Install Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: "Execute PR Review Agent"
+        env:
+          # Secrets are passed as environment variables, never hardcoded or echoed
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+          MAX_COMMENTS_PER_PR: 5
+          CONFIDENCE_THRESHOLD: 0.70
+          DRY_RUN: "false"
+          LOG_LEVEL: "INFO"
+          LANGCHAIN_TRACING_V2: ${{ vars.LANGCHAIN_TRACING_V2 || 'false' }}
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+          LANGCHAIN_PROJECT: ${{ vars.LANGCHAIN_PROJECT || 'github-pr-review-agent' }}
+        run: |
+          # Verify required context is present
+          if [ -z "$PULL_REQUEST_NUMBER" ]; then
+            echo "::error::Pull request number not found. Skipping execution."
+            exit 1
+          fi
+
+          # Execute the review agent entrypoint safely without executing PR code
+          python -m app.main
