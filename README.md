@@ -18,6 +18,41 @@ A security-focused automated code review agent for GitHub Pull Requests. It comb
 
 ---
 
+## 🏛️ System Design & Architecture
+
+```mermaid
+flowchart TD
+    PR[PR Event: Opened / Synchronize] --> Fetch[Fetch Unified Diff & Map Lines]
+    
+    subgraph DualTrack [1. Dual-Track Inspection]
+        Fetch --> DetRules[Deterministic Scanners\n• Secrets & API Keys\n• Risky Terraform Configs\n• Dependency CVEs]
+        Fetch --> IsolatedPrompt[Untrusted Diff Isolation\n• Boundary Delimiters\n• Delimiter Escaping\n• Redact Leaked Secrets]
+    end
+    
+    IsolatedPrompt --> Gemini[Google Gemini AI Engine\nStructured JSON Generation]
+    
+    subgraph Guardrails [2. Guardrails & Safety Pipeline]
+        Gemini --> SchemaVal[Schema Validator\njsonschema Draft 2020-12]
+        SchemaVal --> LineVal[Changed-Line Validator\nRejects Off-Diff Hallucinations]
+        DetRules --> Merger[Finding Merger & Deduplicator]
+        LineVal --> Merger
+        Merger --> Limiter[Comment Limiter\nSeverity Ranking & Max 5 Comments]
+    end
+    
+    subgraph Delivery [3. Safe Delivery]
+        Limiter --> StaleCheck[Stale PR Verification\nAborts if New Commits Pushed]
+        StaleCheck --> Comments[Publish to GitHub\n• 1-Click Code Suggestions\n• Executive Summary & Risk Gauge]
+    end
+```
+
+### Core Architectural Principles
+- **Dual-Track Analysis**: Deterministic scanners catch credentials, infrastructure risks, and dependency CVEs with 100% precision before AI is invoked.
+- **Indirect Prompt Injection Defense**: Diff contents are treated as untrusted user payloads, wrapped in boundary delimiters to prevent prompt breakout.
+- **Strict Line Containment**: AI suggestions on non-existent lines or unchanged code are discarded before publication.
+- **Least-Privilege Security**: The agent cannot merge, approve, or push code. Operates strictly under `contents: read` and `pull-requests: write`.
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Installation
