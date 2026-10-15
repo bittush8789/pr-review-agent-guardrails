@@ -61,6 +61,26 @@ pytest
 
 ---
 
+## 📁 Project Structure
+
+```text
+├── .github/workflows/      # Automated PR review GitHub Actions workflow
+├── app/
+│   ├── config/             # Settings & sensitive data redaction
+│   ├── github/             # GitHub REST API client & diff parser
+│   ├── guardrails/         # Schema, line-boundary & injection defense
+│   ├── providers/          # Google Gemini AI integration
+│   ├── review/             # Review orchestrator & executive summary
+│   ├── rules/              # Secret, Terraform & dependency scanners
+│   └── schemas/            # JSON schemas & 1-click suggested changes
+├── evals/                  # Benchmark datasets & evaluation metrics
+├── examples/               # Standalone interactive demo (run_demo.py)
+├── tests/                  # Unit and integration test suite (60 tests)
+└── requirements.txt        # Project dependencies
+```
+
+---
+
 ## 📄 License
 
 [Apache 2.0](LICENSE)
