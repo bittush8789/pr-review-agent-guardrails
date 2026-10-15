@@ -117,6 +117,7 @@ docker compose --profile test run test
 ├── docs/                   # Complete architectural, security & user manuals
 ├── evals/                  # Benchmark datasets & evaluation metrics
 ├── examples/               # Standalone interactive demo (run_demo.py)
+├── FDE-docs/               # Enterprise BRD, TRD & SRD specifications
 ├── tests/                  # Unit and integration test suite (60 tests)
 ├── Dockerfile              # Hardened container image
 ├── docker-compose.yml      # Container orchestration
@@ -127,10 +128,16 @@ docker compose --profile test run test
 
 ## 📚 Documentation
 
+### Core Manuals
 - [User & Operator Guide](docs/user-guide.md) — Complete setup, configuration `.env` table, and troubleshooting.
 - [Architecture Specifications](docs/architecture.md) — 15-step pipeline, subsystems, and component design.
 - [Security Model & Threat Analysis](docs/security-model.md) — Prompt injection defense and least-privilege guarantees.
 - [Evaluation Methodology](docs/evaluation-methodology.md) — Precision, recall, and benchmark metrics.
+
+### Forward Deployed Engineering (FDE) Specifications
+- [Business Requirements Document (BRD)](FDE-docs/BRD.md) — Problem statement, business KPIs, stakeholder personas, and ROI.
+- [Technical Requirements Document (TRD)](FDE-docs/TRD.md) — Sequence diagrams, subsystem specs, API contracts, and SLAs.
+- [Software & Security Requirements Document (SRD)](FDE-docs/SRD.md) — Functional requirements (FR), OWASP LLM security (SSR), and traceability matrix (RTM).
 
 ---
 
