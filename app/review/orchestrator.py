@@ -19,6 +19,7 @@ from app.providers.base import AIReviewProvider, ProviderAPIError
 from app.providers.gemini_provider import GeminiProvider
 from app.review.finding_merger import FindingMerger
 from app.review.prompt_builder import PromptBuilder
+from app.review.summary_builder import SummaryBuilder
 from app.review.tracing import traceable
 from app.rules.rule_registry import DeterministicRuleRegistry
 from app.schemas.review_finding import ReviewFinding
@@ -41,6 +42,7 @@ class ReviewExecutionResult:
     total_candidates_count: int = 0
     final_published_count: int = 0
     published_comments: list[PublishedComment] = field(default_factory=list)
+    summary_comment_id: Optional[int] = None
     error_message: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -57,6 +59,7 @@ class ReviewExecutionResult:
                 "total_candidates": self.total_candidates_count,
                 "final_published": self.final_published_count,
             },
+            "summary_comment_id": self.summary_comment_id,
             "published_comments": [
                 {"file": c.file, "line": c.line, "title": c.title, "dry_run": c.is_dry_run}
                 for c in self.published_comments
@@ -97,6 +100,7 @@ class ReviewOrchestrator:
             pr_service=self.pr_service,
             dry_run=settings.dry_run,
         )
+        self.summary_builder = SummaryBuilder()
 
         # AI Provider setup (Gemini)
         if ai_provider is not None:
@@ -246,6 +250,27 @@ class ReviewOrchestrator:
                 error_message=f"Publication failure: {pub_err}",
             )
 
+        # Step 14b: Publish Top-Level PR Executive Summary Comment
+        summary_comment_id: Optional[int] = None
+        if self.settings.post_summary_comment:
+            logger.info("Step 14b: Building and publishing PR Executive Summary...")
+            gemini_status_str = "Error/Skipped" if gemini_skipped else "Active"
+            summary_markdown = self.summary_builder.build_summary_markdown(
+                pr_number=pr_number,
+                repo=repo,
+                head_sha=head_sha,
+                model_name=self.settings.gemini_model,
+                findings=final_findings,
+                total_files=len(parsed_diff.valid_changed_lines),
+                total_changed_lines=total_changed_lines,
+                gemini_status=gemini_status_str,
+            )
+            summary_comment_id = self.review_publisher.publish_executive_summary(
+                repo=repo,
+                pr_number=pr_number,
+                summary_markdown=summary_markdown,
+            )
+
         # Step 15: Record sanitized execution results
         status = "partial_failure_gemini_skipped" if gemini_skipped and gemini_error else "success"
         result = ReviewExecutionResult(
@@ -260,6 +285,7 @@ class ReviewOrchestrator:
             total_candidates_count=len(merged_candidates),
             final_published_count=len(published_records),
             published_comments=published_records,
+            summary_comment_id=summary_comment_id,
             error_message=gemini_error,
         )
 

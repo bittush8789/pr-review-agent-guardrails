@@ -55,6 +55,7 @@ class Settings:
     langsmith_api_key: Optional[str] = None
     langsmith_project: str = "github-pr-review-agent"
     langsmith_endpoint: str = "https://api.smith.langchain.com"
+    post_summary_comment: bool = True
 
     def __repr__(self) -> str:
         """Mask credentials when printing or logging settings."""
@@ -184,6 +185,10 @@ def load_settings(env: Optional[dict[str, str]] = None) -> Settings:
         os.environ["LANGCHAIN_PROJECT"] = langsmith_project
         os.environ["LANGCHAIN_ENDPOINT"] = langsmith_endpoint
 
+    # PR Executive Summary configuration
+    summary_raw = source.get("POST_SUMMARY_COMMENT", "true").strip().lower()
+    post_summary_comment = summary_raw not in {"0", "false", "no"}
+
     return Settings(
         github_token=github_token,
         gemini_api_key=gemini_api_key,
@@ -200,6 +205,7 @@ def load_settings(env: Optional[dict[str, str]] = None) -> Settings:
         langsmith_api_key=langsmith_api_key,
         langsmith_project=langsmith_project,
         langsmith_endpoint=langsmith_endpoint,
+        post_summary_comment=post_summary_comment,
     )
 
 

@@ -157,3 +157,41 @@ class ReviewPublisher:
             pr_number,
         )
         return published
+
+    def publish_executive_summary(
+        self,
+        repo: str,
+        pr_number: int,
+        summary_markdown: str,
+    ) -> Optional[int]:
+        """Publish a top-level executive summary comment to the PR conversation thread.
+
+        Args:
+            repo: Repository in 'owner/repo' format.
+            pr_number: Pull request number.
+            summary_markdown: Formatted markdown content.
+
+        Returns:
+            Comment ID if published, None if dry-run or on failure.
+        """
+        if self.dry_run:
+            logger.info(
+                "[DRY RUN] Would publish executive summary to PR #%d on %s:\n%s...",
+                pr_number,
+                repo,
+                summary_markdown[:250].replace("\n", " "),
+            )
+            return None
+
+        endpoint = f"/repos/{repo}/issues/{pr_number}/comments"
+        payload = {"body": summary_markdown}
+
+        try:
+            logger.info("Publishing PR Executive Summary to conversation thread for %s#%d...", repo, pr_number)
+            res = self.client.post(endpoint, json_data=payload)
+            comment_id = res.get("id")
+            logger.info("Published PR Executive Summary (comment id: %s) for %s#%d.", comment_id, repo, pr_number)
+            return comment_id
+        except GitHubAPIError as err:
+            logger.error("Failed to post PR Executive Summary to %s#%d: %s", repo, pr_number, err)
+            return None
