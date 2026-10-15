@@ -1,0 +1,51 @@
+services:
+  # Main PR Review Agent service (analyzes live PR specified in .env)
+  pr-reviewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pr-review-agent
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
+      - PULL_REQUEST_NUMBER=${PULL_REQUEST_NUMBER}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - MAX_COMMENTS_PER_PR=${MAX_COMMENTS_PER_PR:-5}
+      - CONFIDENCE_THRESHOLD=${CONFIDENCE_THRESHOLD:-0.70}
+      - DRY_RUN=${DRY_RUN:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    restart: "no"
+
+  # Standalone Interactive Demo service (simulates PR with vulnerabilities)
+  demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pr-review-agent-demo
+    volumes:
+      - ./examples:/workspace/examples:ro
+    entrypoint: ["python", "examples/run_demo.py"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - DRY_RUN=true
+    profiles:
+      - demo
+
+  # Test runner service (executes pytest in containerized environment)
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pr-review-agent-test
+    volumes:
+      - ./tests:/workspace/tests:ro
+    entrypoint: ["python", "-m", "pytest"]
+    profiles:
+      - test

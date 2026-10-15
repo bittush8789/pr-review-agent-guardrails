@@ -78,6 +78,9 @@ python examples/run_demo.py
 
 # Or review a live PR
 python -m app.main
+
+# Or run via Docker Compose
+docker compose up pr-reviewer
 ```
 
 ---
@@ -92,6 +95,9 @@ To run on every pull request automatically, add your Gemini API key under **Repo
 
 ```bash
 pytest
+
+# Or run tests in Docker
+docker compose --profile test run test
 ```
 
 ---
@@ -111,6 +117,8 @@ pytest
 ├── evals/                  # Benchmark datasets & evaluation metrics
 ├── examples/               # Standalone interactive demo (run_demo.py)
 ├── tests/                  # Unit and integration test suite (60 tests)
+├── Dockerfile              # Hardened container image
+├── docker-compose.yml      # Container orchestration
 └── requirements.txt        # Project dependencies
 ```
 
