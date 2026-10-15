@@ -6,6 +6,7 @@ import logging
 from typing import Optional
 
 from app.github.diff_parser import ParsedDiff
+from app.rules.dependency_scanner import DependencyScanner
 from app.rules.secret_scanner import SecretScanner
 from app.rules.terraform_risk import TerraformRiskAnalyzer
 from app.schemas.review_finding import ReviewFinding
@@ -20,9 +21,11 @@ class DeterministicRuleRegistry:
         self,
         secret_scanner: Optional[SecretScanner] = None,
         terraform_analyzer: Optional[TerraformRiskAnalyzer] = None,
+        dependency_scanner: Optional[DependencyScanner] = None,
     ):
         self.secret_scanner = secret_scanner or SecretScanner()
         self.terraform_analyzer = terraform_analyzer or TerraformRiskAnalyzer()
+        self.dependency_scanner = dependency_scanner or DependencyScanner()
 
     def run_all_checks(self, parsed_diff: ParsedDiff) -> list[ReviewFinding]:
         """Execute all deterministic rules against parsed diff changes.
@@ -42,6 +45,10 @@ class DeterministicRuleRegistry:
         logger.info("Executing deterministic Terraform risk analysis...")
         tf_findings = self.terraform_analyzer.scan_diff_lines(parsed_diff.added_lines_content)
         findings.extend(tf_findings)
+
+        logger.info("Executing deterministic dependency & supply chain scanning...")
+        dep_findings = self.dependency_scanner.scan_diff_lines(parsed_diff.added_lines_content)
+        findings.extend(dep_findings)
 
         logger.info("Deterministic checks complete: %d findings discovered.", len(findings))
         return findings

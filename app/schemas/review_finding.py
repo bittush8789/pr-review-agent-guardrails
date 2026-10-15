@@ -78,6 +78,11 @@ SINGLE_FINDING_JSON_SCHEMA: dict[str, Any] = {
             "maximum": 1.0,
             "description": "Model confidence score between 0.0 and 1.0.",
         },
+        "suggested_code": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Optional 1-click replacement code snippet for GitHub suggestion.",
+        },
     },
     "additionalProperties": False,
 }
@@ -111,10 +116,11 @@ class ReviewFinding:
     confidence: float
     source: str = "ai"  # "deterministic:secret_scanner", "deterministic:terraform_risk", "gemini"
     rule_id: Optional[str] = None
+    suggested_code: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert finding to standard dictionary format matching schema."""
-        return {
+        data: dict[str, Any] = {
             "file": self.file,
             "line": self.line,
             "severity": self.severity.value,
@@ -123,10 +129,20 @@ class ReviewFinding:
             "suggestion": self.suggestion,
             "confidence": round(self.confidence, 4),
         }
+        if self.suggested_code is not None:
+            data["suggested_code"] = self.suggested_code
+        return data
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any], source: str = "ai", rule_id: Optional[str] = None) -> ReviewFinding:
+    def from_dict(
+        cls,
+        data: dict[str, Any],
+        source: str = "ai",
+        rule_id: Optional[str] = None,
+        suggested_code: Optional[str] = None,
+    ) -> ReviewFinding:
         """Construct finding instance from validated dictionary."""
+        resolved_suggestion = suggested_code or data.get("suggested_code")
         return cls(
             file=str(data["file"]).strip(),
             line=int(data["line"]),
@@ -137,6 +153,7 @@ class ReviewFinding:
             confidence=float(data["confidence"]),
             source=source,
             rule_id=rule_id,
+            suggested_code=str(resolved_suggestion).rstrip("\r\n") if resolved_suggestion else None,
         )
 
     def format_markdown_comment(self) -> str:
@@ -150,10 +167,21 @@ class ReviewFinding:
         badge = severity_icons.get(self.severity, "**NOTICE**")
         source_note = f" *(Identified by {self.source})*" if self.source != "gemini" else ""
 
+        # Format GitHub 1-click suggested change if available
+        suggestion_block = ""
+        if self.suggested_code:
+            code_text = self.suggested_code.rstrip()
+            if "```suggestion" not in self.suggestion:
+                if code_text.strip().startswith("```suggestion"):
+                    suggestion_block = f"\n\n{code_text.strip()}"
+                else:
+                    suggestion_block = f"\n\n```suggestion\n{code_text}\n```"
+
         return (
             f"### {badge}: {self.title}{source_note}\n\n"
             f"**Category:** `{self.category.value}` | **Confidence:** `{self.confidence:.0%}`\n\n"
-            f"{self.suggestion}\n\n"
+            f"{self.suggestion}"
+            f"{suggestion_block}\n\n"
             f"---\n"
             f"*Automated review by GitHub PR-Review Agent with Guardrails. "
             f"Please verify before merging.*"
