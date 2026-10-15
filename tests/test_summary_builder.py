@@ -90,3 +90,30 @@ def test_build_summary_markdown_with_findings(builder):
     assert "app/db.py:15" in markdown
     assert "SQL Injection Risk" in markdown
     assert "Guardrails Audit Summary" in markdown
+
+
+def test_calculate_complexity(builder):
+    xs = builder.calculate_complexity(total_files=1, total_changed_lines=10)
+    assert xs.size_tag == "XS"
+    assert "Extra Small" in xs.label
+
+    s = builder.calculate_complexity(total_files=3, total_changed_lines=45)
+    assert s.size_tag == "S"
+
+    m = builder.calculate_complexity(total_files=8, total_changed_lines=150)
+    assert m.size_tag == "M"
+
+    xl = builder.calculate_complexity(total_files=30, total_changed_lines=1000)
+    assert xl.size_tag == "XL"
+    assert "split" in xl.recommendation.lower()
+
+
+def test_summarize_components(builder):
+    files = ["tests/test_api.py", "infra/main.tf", "requirements.txt", "app/main.py", "README.md"]
+    categories = builder.summarize_components(files)
+    assert any("Tests" in c for c in categories)
+    assert any("Terraform" in c for c in categories)
+    assert any("Dependencies" in c for c in categories)
+    assert any("Core" in c for c in categories)
+    assert any("Documentation" in c for c in categories)
+

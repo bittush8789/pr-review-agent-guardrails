@@ -87,6 +87,18 @@ def run_automated_demo() -> None:
             ),
         ),
         FilePatch(
+            filename="requirements.txt",
+            status="added",
+            additions=3,
+            deletions=0,
+            patch=(
+                "@@ -0,0 +1,3 @@\n"
+                "+boto3==1.34.0\n"
+                "+requests==2.25.1\n"
+                "+express=*\n"
+            ),
+        ),
+        FilePatch(
             filename="services/auth.py",
             status="added",
             additions=4,
@@ -120,8 +132,8 @@ def run_automated_demo() -> None:
     total_lines = len(parsed_diff.added_lines_content)
     print(f"       Inspected {total_files} files, {total_lines} additions.")
 
-    # Step 2: Deterministic Security Rules
-    print_step(2, "Running Deterministic Security Checks", "Scanning for hardcoded secrets & Terraform risks...")
+    # Step 2: Deterministic Security Rules (Secrets, Terraform, Dependencies)
+    print_step(2, "Running Deterministic Security Checks", "Scanning for hardcoded secrets, Terraform risks & vulnerable packages...")
     rule_registry = DeterministicRuleRegistry()
     det_findings = rule_registry.run_all_checks(parsed_diff)
     print(f"       Found {len(det_findings)} deterministic issues:")
@@ -199,14 +211,20 @@ def run_automated_demo() -> None:
 
     print(f"       Final Published Comments ({len(final_findings)} items):")
     for idx, f in enumerate(final_findings, 1):
-        print(f"       {idx}. [{f.severity.upper()}] {f.file}:{f.line} -> {f.title}")
+        suggestion_tag = " [💡 One-Click GitHub Fix Available]" if f.suggested_code else ""
+        print(f"       {idx}. [{f.severity.upper()}] {f.file}:{f.line} -> {f.title}{suggestion_tag}")
+        if f.suggested_code:
+            preview_code = f.suggested_code.strip().replace("\n", "\n              ")
+            print(f"          ```suggestion\n              {preview_code}\n          ```")
 
-    # Step 6: PR Risk Score & Executive Summary
-    print_step(6, "Generating PR Risk Score & Executive Summary", "Calculating risk score (0-100)...")
+    # Step 6: PR Risk Score, Complexity & Executive Summary
+    print_step(6, "Generating PR Complexity, Risk Score & Executive Summary", "Calculating complexity and risk score (0-100)...")
     summary_builder = SummaryBuilder()
     risk = summary_builder.calculate_risk(final_findings)
+    complexity = summary_builder.calculate_complexity(total_files, total_lines)
 
     print(f"\n" + "-" * 70)
+    print(f" PR Complexity: {complexity.badge} (Estimated Effort: {complexity.estimated_effort})")
     print(f" PR Security Assessment: {risk.badge} (Risk Score: {risk.numeric_score}/100)")
     print("-" * 70)
 
@@ -219,6 +237,7 @@ def run_automated_demo() -> None:
         total_files=total_files,
         total_changed_lines=total_lines,
         gemini_status="Active" if settings.gemini_api_key else "Simulated",
+        file_list=list(parsed_diff.valid_changed_lines.keys()),
     )
 
     print("\n[Preview of Executive Summary posted to GitHub PR description]:\n")

@@ -264,6 +264,7 @@ class ReviewOrchestrator:
                 total_files=len(parsed_diff.valid_changed_lines),
                 total_changed_lines=total_changed_lines,
                 gemini_status=gemini_status_str,
+                file_list=list(parsed_diff.valid_changed_lines.keys()),
             )
             summary_comment_id = self.review_publisher.publish_executive_summary(
                 repo=repo,

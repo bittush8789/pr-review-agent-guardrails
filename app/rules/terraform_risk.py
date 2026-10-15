@@ -23,6 +23,7 @@ class TerraformRule:
     confidence: float
     title: str
     suggestion: str
+    suggested_code: Optional[str] = None
 
 
 class TerraformRiskAnalyzer:
@@ -40,6 +41,7 @@ class TerraformRiskAnalyzer:
             confidence=0.90,
             title="Security Group allows unrestricted ingress from 0.0.0.0/0",
             suggestion="Restrict ingress traffic to specific authorized CIDR blocks or security group references instead of opening access to the entire Internet.",
+            suggested_code='    cidr_blocks = ["10.0.0.0/16"]  # Restrict to internal VPC CIDR',
         ),
         TerraformRule(
             rule_id="TF_S3_PUBLIC_ACL",
@@ -52,6 +54,7 @@ class TerraformRiskAnalyzer:
             confidence=0.95,
             title="S3 Bucket configured with public ACL",
             suggestion="Remove public ACLs ('public-read', 'public-read-write'). Use private ACLs and enforce AWS S3 Public Access Blocks.",
+            suggested_code='  acl = "private"',
         ),
         TerraformRule(
             rule_id="TF_S3_PUBLIC_BLOCK_DISABLED",
@@ -64,6 +67,7 @@ class TerraformRiskAnalyzer:
             confidence=0.92,
             title="S3 Public Access Block disabled",
             suggestion="Enable all S3 Public Access Block controls by setting block_public_acls, block_public_policy, ignore_public_acls, and restrict_public_buckets to true.",
+            suggested_code='  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true',
         ),
         TerraformRule(
             rule_id="TF_DISABLED_ENCRYPTION",
@@ -76,6 +80,7 @@ class TerraformRiskAnalyzer:
             confidence=0.90,
             title="Resource encryption explicitly disabled",
             suggestion="Enable encryption at rest (set encrypted = true) using AWS KMS or cloud-native encryption keys.",
+            suggested_code='  encrypted = true',
         ),
         TerraformRule(
             rule_id="TF_IAM_WILDCARD_ACTION",
@@ -100,6 +105,7 @@ class TerraformRiskAnalyzer:
             confidence=0.95,
             title="Database instance configured with public accessibility",
             suggestion="Set publicly_accessible = false. Database instances should reside within private VPC subnets with no public IP address.",
+            suggested_code='  publicly_accessible = false',
         ),
     ]
 
@@ -135,6 +141,7 @@ class TerraformRiskAnalyzer:
                         confidence=rule.confidence,
                         source=f"deterministic:terraform_risk:{rule.rule_id}",
                         rule_id=rule.rule_id,
+                        suggested_code=rule.suggested_code,
                     )
                     findings.append(finding)
 

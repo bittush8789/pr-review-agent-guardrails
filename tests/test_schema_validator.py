@@ -147,3 +147,28 @@ def test_missing_required_fields_rejected(validator):
     }
     findings = validator.validate_raw_response(payload)
     assert len(findings) == 0
+
+
+def test_suggested_code_in_schema_and_markdown(validator):
+    payload = {
+        "findings": [
+            {
+                "file": "terraform/s3.tf",
+                "line": 10,
+                "severity": "critical",
+                "category": "infrastructure",
+                "title": "Public S3 ACL",
+                "suggestion": "Set bucket to private.",
+                "confidence": 0.98,
+                "suggested_code": '  acl = "private"',
+            }
+        ]
+    }
+    findings = validator.validate_raw_response(payload)
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.suggested_code == '  acl = "private"'
+    markdown = f.format_markdown_comment()
+    assert "```suggestion" in markdown
+    assert 'acl = "private"' in markdown
+
