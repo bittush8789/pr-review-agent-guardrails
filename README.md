@@ -114,6 +114,7 @@ docker compose --profile test run test
 │   ├── review/             # Review orchestrator & executive summary
 │   ├── rules/              # Secret, Terraform & dependency scanners
 │   └── schemas/            # JSON schemas & 1-click suggested changes
+├── docs/                   # Complete architectural, security & user manuals
 ├── evals/                  # Benchmark datasets & evaluation metrics
 ├── examples/               # Standalone interactive demo (run_demo.py)
 ├── tests/                  # Unit and integration test suite (60 tests)
@@ -121,6 +122,15 @@ docker compose --profile test run test
 ├── docker-compose.yml      # Container orchestration
 └── requirements.txt        # Project dependencies
 ```
+
+---
+
+## 📚 Documentation
+
+- [User & Operator Guide](docs/user-guide.md) — Complete setup, configuration `.env` table, and troubleshooting.
+- [Architecture Specifications](docs/architecture.md) — 15-step pipeline, subsystems, and component design.
+- [Security Model & Threat Analysis](docs/security-model.md) — Prompt injection defense and least-privilege guarantees.
+- [Evaluation Methodology](docs/evaluation-methodology.md) — Precision, recall, and benchmark metrics.
 
 ---
 

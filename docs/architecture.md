@@ -76,6 +76,7 @@ The orchestrator executes the review lifecycle in the following sequence:
 6. **Execute Deterministic Checks**:
    - `SecretScanner`: Scan added line contents against regex patterns (AWS keys, GitHub tokens, private keys, passwords) and calculate entropy.
    - `TerraformRiskAnalyzer`: Scan `.tf` and `.tfvars` files for public ingress (`0.0.0.0/0`), public S3 buckets, disabled encryption, and wildcard IAM policies.
+   - `DependencyScanner`: Scan manifest files (`requirements.txt`, `package.json`, `go.mod`) for unpinned/wildcard dependencies, insecure HTTP package download URLs, and known published CVEs.
 7. **Prepare Redacted, Minimal Code Context**: Run redaction filters on the diff to mask any detected credentials before packaging the context. Enclose untrusted diff text within unforgeable boundary delimiters.
 8. **Request Gemini Findings**: Send system instructions and delimited diff payload to Google Gemini via `google-genai` using structured JSON output.
 9. **Validate Response Against Schema**: Pass model output to `jsonschema` using `REVIEW_FINDINGS_JSON_SCHEMA`. Reject malformed JSON, missing fields, or invalid enum values.
@@ -83,7 +84,8 @@ The orchestrator executes the review lifecycle in the following sequence:
 11. **Merge Deterministic and AI Findings**: Combine findings while preserving source tracking and rule IDs.
 12. **Remove Duplicates and Apply Comment Limits**: Deduplicate overlapping findings targeting the same or adjacent lines. Enforce a strict upper bound (default: 5 comments) sorted by severity (critical > high > medium > low), source (deterministic > AI), and confidence score.
 13. **Recheck Current PR Revision**: Query GitHub for the current PR head SHA. If a new commit was pushed while analysis was running, abort publication immediately to prevent posting comments on stale code.
-14. **Publish Inline Review Comments**: Format findings as Markdown badges and post inline comments to `/repos/{owner}/{repo}/pulls/{number}/comments`.
+14. **Publish Inline Review Comments & 1-Click Suggestions**: Format findings as Markdown badges with native GitHub ```` ```suggestion ```` blocks for 1-click remediation, and post inline comments to `/repos/{owner}/{repo}/pulls/{number}/comments`.
+14b. **Publish PR Executive Summary & Complexity Assessment**: Post a conversation-level summary table with PR size category (`XS` to `XL`), estimated review effort, domain classification, and an overall risk gauge (0-100).
 15. **Record Sanitized Execution Results**: Emit an execution summary JSON object to standard output for workflow logging.
 
 ---
